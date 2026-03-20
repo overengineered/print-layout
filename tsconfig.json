@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "inlineSources": true,
+    "sourceMap": true,
+    "noEmit": false,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "declaration": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
+  },
+  "exclude": ["__tests__"]
+}
