@@ -57,7 +57,7 @@ function buildLine(
   const compType = compress(type, MIN_TYPE);
   if (indent.length > 4) {
     const N = indent.length - 4;
-    const marker = `<${N}< ` + compType + " " + tag;
+    const marker = `«${N}« ` + compType + " " + tag;
     if (marker.length <= maxLength) return marker;
   }
 
@@ -102,8 +102,14 @@ function renderContent(
   return lines;
 }
 
-function hasChildren(node: LayoutNode): boolean {
-  return (node.children?.length ?? 0) > 0;
+function hasRenderableChildren(depth: number): (node: LayoutNode) => boolean {
+  return (node: LayoutNode) => {
+    if (!node.children?.length) return false;
+    if (depth === 0) return true;
+    let cur: LayoutNode = node;
+    while (isChainable(cur)) cur = cur.children![0];
+    return (cur.children ?? []).some(hasRenderableChildren(depth - 1));
+  };
 }
 
 function isChainable(node: LayoutNode): boolean {
@@ -126,19 +132,16 @@ function renderChain(
   const chainStr = types.join(" ▶ ");
   const tagStr = cur.tag ? " " + cur.tag : "";
 
-  if (cur.content?.length) {
-    return renderContent(indent + chainStr + tagStr, cur.content, maxLength);
-  }
-
-  return [
-    indent + chainStr + tagStr,
-    ...renderChildren(cur, indent, maxLength),
-  ];
+  const firstLinePart = indent + chainStr + tagStr;
+  const firstLines = cur.content?.length
+    ? renderContent(firstLinePart, cur.content, maxLength)
+    : [firstLinePart];
+  return [...firstLines, ...renderChildren(cur, indent, maxLength)];
 }
 
-function shouldUseGuides(node: LayoutNode, indent: string): boolean {
-  if (indent.length === 0) return false;
-  return (node.children ?? []).filter(hasChildren).length >= 2;
+function shouldUseGuides(node: LayoutNode): boolean {
+  const allExceptLast = (node.children ?? []).slice(0, -1);
+  return !!allExceptLast.filter(hasRenderableChildren(1)).length;
 }
 
 function renderChildren(
@@ -150,7 +153,7 @@ function renderChildren(
   if (children.length === 0) return [];
 
   const childIndent = indent + "  ";
-  const useGuides = shouldUseGuides(node, indent);
+  const useGuides = shouldUseGuides(node);
 
   if (!useGuides) {
     return children.flatMap((child) =>
@@ -159,20 +162,13 @@ function renderChildren(
   }
 
   const lines: string[] = [];
-  const guidedChildren = children.filter(hasChildren);
-  const lastGuided = guidedChildren[guidedChildren.length - 1];
+  const lastChild = children[children.length - 1];
 
   for (const child of children) {
-    if (!hasChildren(child)) {
-      lines.push(...renderNode(child, childIndent, maxLength));
-      continue;
-    }
-
-    const isLast = child === lastGuided;
-    const guideChar = isLast ? "└ " : "├ ";
+    const isLast = child === lastChild;
     const childLines = renderNode(child, childIndent, maxLength);
     const guidedFirst =
-      indent + guideChar + childLines[0].slice(childIndent.length);
+      indent + (isLast ? "└ " : "├ ") + childLines[0].slice(childIndent.length);
 
     if (isLast) {
       lines.push(guidedFirst, ...childLines.slice(1));
@@ -207,7 +203,10 @@ function renderNode(
   const firstLine = buildLine(indent, node.type, node.tag, maxLength);
 
   if (node.content?.length) {
-    return renderContent(firstLine, node.content, maxLength);
+    return [
+      ...renderContent(firstLine, node.content, maxLength),
+      ...renderChildren(node, indent, maxLength),
+    ];
   }
 
   return [firstLine, ...renderChildren(node, indent, maxLength)];

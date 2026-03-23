@@ -1,6 +1,6 @@
 {
   "name": "print-layout",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Print hierarchical structure in compact way",
   "main": "dist/index.js",
   "scripts": {

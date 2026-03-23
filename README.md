@@ -28,18 +28,19 @@ View *root
   ScrollView
   ├ View [0]
   │   Container
-  │   ├ View [1.0]
-  │   │   Text ("B1")
-  │   │   Text ("B2")
-  │   └ View [1.1]
-  │       Text ("C1")
+  │     View [1.0]
+  │       Text ("A1")
+  │       Text ("A2")
+  │     View [1.1]
+  │       Text ("A3")
   └ View ▶ View ▶ Container
     ├ View [1.0]
     │   Text ("B1")
     ├ View [1.1]
-    │   Text ("C1")
+    │   View [1.1.0]",
+    │     Text ("C1")
     └ View [1.2]
-        Text ("D1")
+        Text ("B2")
 ```
 
 ## Output conventions

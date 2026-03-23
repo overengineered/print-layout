@@ -58,7 +58,6 @@ describe("printLayout", () => {
     ).split("\n");
 
     expect(lines).toEqual([
-      //
       "View [X]",
       "  Text",
       '  "123456789',
@@ -151,13 +150,13 @@ describe("printLayout", () => {
       "View [app.Main]",
       "  ScrollView [app.Items]",
       "    Header [app.Header]",
-      "<2< Im..et [app.ImportantWidget]",
+      "«2« Im..et [app.ImportantWidget]",
       "      View [app.Wrapper]",
-      "<4< Im..et [app.ImportantWidget]",
+      "«4« Im..et [app.ImportantWidget]",
     ]);
   });
 
-  it("shuold print multiple types in one line when parent has only one child and no tag or content", () => {
+  it("should print multiple types in one line when parent has only one child and no tag or content", () => {
     const lines = printLayout({
       type: "ScrollView",
       children: [
@@ -198,6 +197,16 @@ describe("printLayout", () => {
     ]);
   });
 
+  it("should print children when parent has content and children", () => {
+    const lines = printLayout({
+      type: "View",
+      content: ["ABC"],
+      children: [{ type: "Text", content: ["123"] }],
+    }).split("\n");
+
+    expect(lines).toEqual(['View ("ABC")', '  Text ("123")']);
+  });
+
   it("should add indentation level guides when parent is not root and has at least two children that have their own children", () => {
     const lines = printLayout({
       type: "View",
@@ -223,12 +232,12 @@ describe("printLayout", () => {
 
     expect(lines).toEqual([
       "View",
-      "  ScrollView",
-      "  ├ View [0]",
-      '  │   Text ("A")',
-      "  └ View [1]",
-      '      Text ("B")',
-      "  Button [CTA]",
+      "├ ScrollView",
+      "│   View [0]",
+      '│     Text ("A")',
+      "│   View [1]",
+      '│     Text ("B")',
+      "└ Button [CTA]",
       "    Icon",
     ]);
   });
@@ -282,7 +291,13 @@ describe("printLayout", () => {
                         {
                           type: "View",
                           tag: "[1.1]",
-                          children: [{ type: "Text", content: ["C1"] }],
+                          children: [
+                            {
+                              type: "View",
+                              tag: "[1.1.0]",
+                              children: [{ type: "Text", content: ["C1"] }],
+                            },
+                          ],
                         },
                         {
                           type: "View",
@@ -305,18 +320,94 @@ describe("printLayout", () => {
       "  ScrollView",
       "  ├ View [0]",
       "  │   Container",
-      "  │   ├ View [1.0]",
-      '  │   │   Text ("B1")',
-      '  │   │   Text ("B2")',
-      "  │   └ View [1.1]",
+      "  │     View [1.0]",
+      '  │       Text ("B1")',
+      '  │       Text ("B2")',
+      "  │     View [1.1]",
       '  │       Text ("C1")',
       "  └ View ▶ View ▶ Container",
       "    ├ View [1.0]",
       '    │   Text ("B1")',
       "    ├ View [1.1]",
-      '    │   Text ("C1")',
+      "    │   View [1.1.0]",
+      '    │     Text ("C1")',
       "    └ View [1.2]",
       '        Text ("D1")',
+    ]);
+  });
+
+  it("should not print guided indentation when children of children collapse into a chain", () => {
+    const lines = printLayout({
+      type: "UITabBar",
+      tag: "[tabs]",
+      children: [
+        {
+          type: "_UIBarBackground",
+          children: [
+            { type: "UIImageView" },
+            {
+              type: "_UIBarBackgroundShadowView",
+              children: [{ type: "_UIBarBackgroundShadowContentImageView" }],
+            },
+            {
+              type: "_UIBarBackgroundShadowView",
+              children: [{ type: "_UIBarBackgroundShadowContentImageView" }],
+            },
+          ],
+        },
+      ],
+    }).split("\n");
+
+    expect(lines).toEqual([
+      "UITabBar [tabs]",
+      "  _UIBarBackground",
+      "    UIImageView",
+      "    _UIBarBackgroundShadowView ▶ _UIBarBackgroundShadowContentImageView",
+      "    _UIBarBackgroundShadowView ▶ _UIBarBackgroundShadowContentImageView",
+    ]);
+  });
+
+  it("should print guided indentation for each child, not just the ones that have children", () => {
+    const lines = printLayout({
+      type: "UITabBar",
+      tag: "[tabs]",
+      children: [
+        {
+          type: "_UIBarBackground",
+          children: [
+            { type: "UIImageView" },
+            {
+              type: "_UIBarBackgroundShadowView",
+              tag: "[tab1]",
+              children: [
+                {
+                  type: "_UIBarBackgroundShadowContentImageView",
+                  tag: "*active",
+                  children: [{ type: "UIImageView" }],
+                },
+              ],
+            },
+            {
+              type: "_UIBarBackgroundShadowView",
+              tag: "[tab2]",
+              children: [{ type: "_UIBarBackgroundShadowContentImageView" }],
+            },
+            { type: "UIImageView" },
+          ],
+        },
+      ],
+    }).split("\n");
+
+    expect(lines).toEqual([
+      "UITabBar [tabs]",
+      "  _UIBarBackground",
+      "  ├ UIImageView",
+      "  ├ _UIBarBackgroundShadowView [tab1]",
+      "  │   _UIBarBackgroundShadowContentImageView *active",
+      "  │     UIImageView",
+      "  ├ _UIBarBackgroundShadowView [tab2]",
+      "  │   _UIBarBackgroundShadowContentImageView",
+      "  └ UIImageView",
     ]);
   });
 });
